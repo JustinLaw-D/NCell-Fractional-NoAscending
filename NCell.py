@@ -16,12 +16,12 @@ Me = 5.97219e24 # mass of Earth (kg)
 
 class NCell:
 
-    def __init__(self, S, S_d, D, N_c, target_alts, alt_edges, lam, update_period=1/12, min_lifetime=0, CD=2.2, m0=0, min_dt=0, 
-                 max_dt=0.1, dtfactor=1/100, t_max=np.inf, setF107=None, events=[], R_i=None, lam_rb=None, up_time=None, 
-                 del_t=None, fail_t=None, expl_rate_L=None, expl_rate_D=None, C_sat=None, sigma_sat=None, expl_rate_R=None, 
-                 C_rb=None, sigma_rb=None, v=None, delta=None, alphaS=None, alphaD=None, alphaN=None, alphaR=None, P=None, 
-                 m_s=None, m_rb=None, AM_sat=None, AM_rb=None, tau_do=None, L_min=1e-3, L_max=1, num_L=10, chi_min=-2, chi_max=1.0, 
-                 num_chi=10, num_dir=1000, table_path=None):
+    def __init__(self, S, S_d, D, N_c, alt_edges, lam, update_period=1/12, min_lifetime=0, CD=2.2, m0=0, min_dt=0, 
+                 max_dt=0.1, dtfactor=1/100, t_max=np.inf, setF107=None, events=[], R_i=None, lam_rb=None, del_t=None, 
+                 expl_rate_L=None, expl_rate_D=None, C_sat=None, sigma_sat=None, expl_rate_R=None, C_rb=None, sigma_rb=None, 
+                 v=None, delta=None, alphaS=None, alphaD=None, alphaN=None, alphaR=None, P=None, m_s=None, m_rb=None, AM_sat=None, 
+                 AM_rb=None, tau_do=None, L_min=1e-3, L_max=1, num_L=10, chi_min=-2, chi_max=1.0, num_chi=10, num_dir=1000, 
+                 table_path=None):
         '''
         Constructor for NCell class
     
@@ -30,9 +30,8 @@ class NCell:
         S_d : list of initial number of deorbiting satellites in each shell of each type (list of arrays)
         D : list of initial number of derelict satellites in each shell of each type (list of arrays)
         N_c : initial number of catestrophically lethal debris in each shell (array)
-        target_alts : list of target altitude of each satellite type (array, km)
         alt_edges : edges of the altitude bands to be used (array, km)
-        lam : launch rate of satellites of each type (array, 1/yr)
+        lam : launch rate of satellites of each type into each shell (list of arrays, 1/yr)
 
         Keyword Parameter(s):
         update_period : how often the drag lifetimes are updated (yr, default 1/12)
@@ -47,9 +46,7 @@ class NCell:
         events : the discrete events occuring in the system (list of Event objects, default no events)
         R_i : list of rocket bodies in each shell of each type (list of lists, default no rocket bodies)
         lam_rb : launch rate of rocket bodies of each type into the each shell (list of arrays, 1/yr, default all 0)
-        up_time : ascention time of satellites of each type in each shell (list of arrays, yr, default all 1/10yr)
         del_t : mean satellite lifetime of each type (list, yr, default 5yr)
-        fail_t : ascending satellite failure lifetime (list of lists, yr, default np.inf)
         expl_rate_L : number of explosions that occur in a 1yr period with a population of 100 live satellites for
                       each type of satellite (list of floats, default all 0)
         expl_rate_D : number of explosions that occur in a 1yr period with a population of 100 derelict satellites
@@ -106,8 +103,6 @@ class NCell:
             R_i = [[]]*self.num_cells
         if lam_rb is None:
             lam_rb = [None]*self.num_cells
-        if up_time is None:
-            up_time = [None]*self.num_cells
         if v is None:
             v = [10]*self.num_cells
         if delta is None:
@@ -122,12 +117,9 @@ class NCell:
             alphaR = [None]*self.num_cells
         if tau_do is None:
             tau_do = [None]*self.num_cells
-        if fail_t is None:
-            fail_t = [None]*self.num_cells
 
         self.num_sat_types = len(S[0]) # save number of satellite and rocket types
         self.num_rb_types = len(R_i[0])
-        self.lam_sat = np.array(lam) # save launch rate of each satellite type
         self.update_period = update_period # save lifetime calculation parameters
         self.min_lifetime = min_lifetime
         self.CD = CD
@@ -171,8 +163,6 @@ class NCell:
             # convert Nones to array of Nones
             if lam_rb[i] is None:
                 lam_rb[i] = [None]*self.num_rb_types
-            if up_time[i] is None:
-                up_time[i] = [None]*self.num_sat_types
             if del_t is None:
                 del_t = [None]*self.num_sat_types
             if expl_rate_L is None:
@@ -209,8 +199,6 @@ class NCell:
                 AM_rb = [None]*self.num_rb_types
             if tau_do[i] is None:
                 tau_do[i] = [None]*self.num_sat_types
-            if fail_t[i] is None:
-                fail_t[i] = [None]*self.num_sat_types
 
             S_cell = np.empty(self.num_sat_types, dtype=np.double) # setup satellite parameter arrays
             S_d_cell = np.empty(self.num_sat_types, dtype=np.double)
@@ -218,10 +206,8 @@ class NCell:
             m_sat_cell = np.empty(self.num_sat_types, dtype=np.double)
             sigma_sat_cell = np.empty(self.num_sat_types, dtype=np.double)
             del_t_cell = np.empty(self.num_sat_types, dtype=np.double)
-            fail_t_cell = np.empty(self.num_sat_types, dtype=np.double)
+            lam_sat_cell = np.empty(self.num_sat_types, dtype=np.double)
             tau_do_cell = np.empty(self.num_sat_types, dtype=np.double)
-            target_alt_cell = np.empty(self.num_sat_types, dtype=np.double)
-            up_time_cell = np.empty(self.num_sat_types, dtype=np.double)
             alpha_S_cell = np.empty(self.num_sat_types, dtype=np.double)
             alpha_D_cell = np.empty(self.num_sat_types, dtype=np.double)
             alpha_R_cell = np.empty(self.num_sat_types, dtype=np.double)
@@ -236,12 +222,8 @@ class NCell:
             for j in range(self.num_sat_types): # iterate through satellite types, and generate parameters for each
                 
                 # convert Nones to default values
-                if up_time[i][j] is None:
-                    up_time[i][j] = 1/10
                 if del_t[j] is None:
                     del_t[j] = 5
-                if fail_t[i][j] is None:
-                    fail_t[i][j] = np.inf
                 if expl_rate_L[j] is None:
                     expl_rate_L[j] = 0
                 if expl_rate_D[j] is None:
@@ -276,10 +258,8 @@ class NCell:
                 m_sat_cell[j] = m_s[j]
                 sigma_sat_cell[j] = sigma_sat[j]
                 del_t_cell[j] = del_t[j]
-                fail_t_cell[j] = fail_t[i][j]
+                lam_sat_cell[j] = lam[i][j]
                 tau_do_cell[j] = tau_do[i][j]
-                target_alt_cell[j] = target_alts[j]
-                up_time_cell[j] = up_time[i][j]
                 alpha_S_cell[j] = alphaS[i][j]
                 alpha_D_cell[j] = alphaD[i][j]
                 alpha_R_cell[j] = alphaR[i][j]
@@ -355,10 +335,10 @@ class NCell:
 
             # initialize cell
             cell = Cell(S_cell, S_d_cell, D_cell, R_cell, N_initial, self.logL_edges, self.chi_edges, events_loc,
-                        self.alts[i], self.dhs[i], tau_N, v[i], m_sat_cell, sigma_sat_cell, del_t_cell, fail_t_cell, 
-                        tau_do_cell, target_alt_cell, up_time_cell, alpha_S_cell, alpha_D_cell, alpha_N_cell, alpha_R_cell, 
-                        P_cell, AM_sat_cell, tau_sat_cell, C_sat_cell, expl_rate_L_cell, expl_rate_D_cell, m_rb_cell,
-                        sigma_rb_cell, lam_rb_cell, AM_rb_cell, tau_rb_cell, C_rb_cell, expl_rate_R_cell)
+                        self.alts[i], self.dhs[i], tau_N, v[i], m_sat_cell, sigma_sat_cell, del_t_cell, lam_sat_cell, 
+                        tau_do_cell, alpha_S_cell, alpha_D_cell, alpha_N_cell, alpha_R_cell, P_cell, AM_sat_cell, 
+                        tau_sat_cell, C_sat_cell, expl_rate_L_cell, expl_rate_D_cell, m_rb_cell, sigma_rb_cell, lam_rb_cell, 
+                        AM_rb_cell, tau_rb_cell, C_rb_cell, expl_rate_R_cell)
             self.cells.append(cell)
             if i == self.num_cells - 1: self.upper_N = deepcopy(N_initial) # take the debris field above to be initial debris of top
 
@@ -505,8 +485,7 @@ class NCell:
                     prev_t = t_arr[i]
                     filter[i] = True
                     filter_len += 1
-        to_save = {'alts' : self.alts, 'dhs' : self.dhs, 't' : t_arr[filter], 'logL' : self.logL_edges, 'chi' : self.chi_edges,
-                   'lam_sat' : self.lam_sat}
+        to_save = {'alts' : self.alts, 'dhs' : self.dhs, 't' : t_arr[filter], 'logL' : self.logL_edges, 'chi' : self.chi_edges}
         np.savez_compressed(true_path + "data.npz", **to_save)
         
         # save probability tables
@@ -567,8 +546,6 @@ class NCell:
         atmos.lupdate_time = atmos.time
         atmos.logL_edges = array_dict['logL']
         atmos.chi_edges = array_dict['chi']
-        atmos.lam_sat = array_dict['lam_sat']
-        atmos.num_sat_types = len(atmos.lam_sat)
 
         # compute related parameters
         atmos.logL_ave = np.zeros(atmos.num_L) # average logL value in each bin
@@ -597,6 +574,7 @@ class NCell:
         for i in range(atmos.num_cells):
             cell_path = filepath + "cell" + str(i) + "/"
             atmos.cells.append(Cell.load(cell_path))
+        atmos.num_sat_types = len(atmos.cells[0].m_sat)
         atmos.num_rb_types = len(atmos.cells[0].m_rb)
 
         return atmos
@@ -639,8 +617,6 @@ class NCell:
         NR_expl = np.zeros((self.num_cells, self.num_rb_types)) # array of explosion values for rockets
 
         # get initial D_in, N_in values
-        S_in = np.zeros((self.num_cells+1, self.num_sat_types))
-        S_in[0,:] = self.lam_sat
         S_din = np.zeros((self.num_cells+1, self.num_sat_types))
         D_in = np.zeros((self.num_cells+1, self.num_sat_types))
         R_in = np.zeros((self.num_cells+1, self.num_rb_types))
@@ -650,7 +626,7 @@ class NCell:
         # iterate through cells, from top to bottom
         for i in range(self.num_cells):
             curr_cell = self.cells[i]
-            dSdt[i,:], dS_ddt[i,:], dDdt[i,:], dRdt[i,:], S_in[i+1,:], S_din[i,:], D_in[i,:], R_in[i,:], N_in[i,:,:], sat_coll[i,:,:], RS_coll[i,:,:], R_coll[i,:,:], NS_coll[i,:,:,:], NR_coll[i,:,:,:], NS_expl[i,:], NR_expl[i,:] = curr_cell.dxdt_cell(time)
+            dSdt[i,:], dS_ddt[i,:], dDdt[i,:], dRdt[i,:], S_din[i,:], D_in[i,:], R_in[i,:], N_in[i,:,:], sat_coll[i,:,:], RS_coll[i,:,:], R_coll[i,:,:], NS_coll[i,:,:,:], NR_coll[i,:,:,:], NS_expl[i,:], NR_expl[i,:] = curr_cell.dxdt_cell(time)
             # simulate collisions and explosions
             self.sim_colls(dNdt, sat_coll[i,:,:], curr_cell.m_sat, curr_cell.m_sat, i, 'sat') # sat-sat
             self.sim_colls_satrb(dNdt, RS_coll[i,:,:], curr_cell.m_sat, i, 'sat') # sat-rb
@@ -668,7 +644,6 @@ class NCell:
             dNdt -= np.sum(NR_coll, axis=1)
 
         # go through cells from bottom to top to correct values
-        dSdt += S_in[:self.num_cells,:] - S_in[1:,:]
         dS_ddt += S_din[1:,:] - S_din[:self.num_cells,:]
         dDdt += D_in[1:,:] - D_in[:self.num_cells,:]
         dRdt += R_in[1:,:] - R_in[:self.num_cells,:]

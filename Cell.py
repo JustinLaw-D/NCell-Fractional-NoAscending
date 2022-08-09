@@ -13,8 +13,8 @@ Re = 6371 # radius of Earth (km)
 class Cell:
     
     def __init__(self, S_i, S_di, D_i, R_i, N_i, logL_edges, chi_edges, event_list, alt, dh, tau_N, v, m_sat, sigma_sat,
-                 del_t, fail_t, tau_do, target_alt, up_time, alpha_S, alpha_D, alpha_N, alpha_R, P, AM_sat, tau_sat, C_sat, 
-                 expl_rate_L, expl_rate_D, m_rb, sigma_rb, lam_rb, AM_rb, tau_rb, C_rb, expl_rate_R):
+                 del_t, lam_sat, tau_do, alpha_S, alpha_D, alpha_N, alpha_R, P, AM_sat, tau_sat, C_sat, expl_rate_L, 
+                 expl_rate_D, m_rb, sigma_rb, lam_rb, AM_rb, tau_rb, C_rb, expl_rate_R):
         '''Constructor for Cell class
     
         Parameter(s):
@@ -33,10 +33,8 @@ class Cell:
         m_sat : mass of each satellite type (kg)
         sigma_sat : collision cross-section of each satellite type (m^2)
         del_t : mean satellite lifetime of each type (yr)
-        fail_t : ascending satellite failure lifetime for each type (yr)
+        lam_sat : launch rate of satellites of each type into the band (1/yr)
         tau_do : mean time for satellites of each type to de-orbit from shell (yr)
-        target_alt : target final altitude for each satellite type (km)
-        up_time : amount of time it takes a satellite of each type to ascend through the band (yr)
         alpha_S : the fraction of collisions a live satellite of each type fails to avoid with a live satellite
         alpha_D : the fraction of collisions a live satellite of each type fails to avoid with a derelict satellite
         alpha_N : the fraction of collisions a live satellite of each type fails to avoid with trackable debris
@@ -72,10 +70,8 @@ class Cell:
         self.sigma_sat = sigma_sat
         self.sigma_sat_km = self.sigma_sat/1e6 # same thing, but in km^2
         self.del_t = del_t
-        self.fail_t = fail_t
+        self.lam_sat = lam_sat
         self.tau_do = tau_do
-        self.target_alt = target_alt
-        self.up_time = up_time
         self.alpha_S = alpha_S
         self.alpha_D = alpha_D
         self.alpha_R = alpha_R
@@ -128,7 +124,6 @@ class Cell:
         self.cat_sat_N = np.full((self.num_sat_types, self.num_L, self.num_chi), False) # tracks which collisions are catastrophic
         self.cat_rb_N = np.full((self.num_rb_types, self.num_L, self.num_chi), False)
         self.update_cat_N()
-        self.ascending = (self.target_alt > self.alt + self.dh/2) # list of which satellite types are ascending
 
         # parameters for dxdt calculations
         sigma1_2d = np.resize(self.sigma_sat_km, (self.num_sat_types, self.num_sat_types))
@@ -178,7 +173,7 @@ class Cell:
         # write easy arrays
         Cc_array, Cnc_array = np.array(self.C_c)[filter], np.array(self.C_nc)[filter]
         to_save = {'C_c' : Cc_array, 'C_nc' : Cnc_array, 'tau_N' : self.tau_N, 'trackable' : self.trackable,
-                   'ascending' : self.ascending, 'logL' : self.logL_edges, 'chi' : self.chi_edges}
+                   'logL' : self.logL_edges, 'chi' : self.chi_edges}
         np.savez_compressed(filepath + "data.npz", **to_save)
 
         # write N_bins values
@@ -220,10 +215,9 @@ class Cell:
         # save parameters
         csv_file = open(filepath + 'params.csv', 'w', newline='')
         csv_writer = csv.writer(csv_file, dialect='unix')
-        csv_writer.writerow([self.m_sat[i], self.sigma_sat[i], self.del_t[i], self.fail_t[i], self.tau_do[i], 
-                             self.target_alt[i], self.up_time[i], self.alpha_S[i], self.alpha_D[i], self.alpha_N[i], 
-                             self.alpha_R[i], self.P[i], self.AM_sat[i], self.tau_sat[i], self.C_sat[i], 
-                             self.expl_rate_L[i], self.expl_rate_D[i]])
+        csv_writer.writerow([self.m_sat[i], self.sigma_sat[i], self.del_t[i], self.lam_sat[i], self.tau_do[i], 
+                             self.alpha_S[i], self.alpha_D[i], self.alpha_N[i], self.alpha_R[i], self.P[i], 
+                             self.AM_sat[i], self.tau_sat[i], self.C_sat[i], self.expl_rate_L[i], self.expl_rate_D[i]])
         csv_file.close()
 
         # save data
@@ -307,7 +301,6 @@ class Cell:
         cell.C_nc = array_dict['C_nc'].tolist()
         cell.tau_N = array_dict['tau_N']
         cell.trackable = array_dict['trackable']
-        cell.ascending = array_dict['ascending']
         cell.logL_edges = array_dict['logL']
         cell.chi_edges = array_dict['chi']
 
@@ -354,10 +347,8 @@ class Cell:
         cell.m_sat = np.empty(cell.num_sat_types, dtype=np.double)
         cell.sigma_sat = np.empty(cell.num_sat_types, dtype=np.double)
         cell.del_t = np.empty(cell.num_sat_types, dtype=np.double)
-        cell.fail_t = np.empty(cell.num_sat_types, dtype=np.double)
+        cell.lam_sat = np.empty(cell.num_sat_types, dtype=np.double)
         cell.tau_do = np.empty(cell.num_sat_types, dtype=np.double)
-        cell.target_alt = np.empty(cell.num_sat_types, dtype=np.double)
-        cell.up_time = np.empty(cell.num_sat_types, dtype=np.double)
         cell.alpha_S = np.empty(cell.num_sat_types, dtype=np.double)
         cell.alpha_D = np.empty(cell.num_sat_types, dtype=np.double)
         cell.alpha_N = np.empty(cell.num_sat_types, dtype=np.double)
@@ -439,12 +430,12 @@ class Cell:
         csv_file = open(filepath + 'params.csv', 'r', newline='')
         csv_reader = csv.reader(csv_file, dialect='unix')
         for row in csv_reader: # there's only one row, but this extracts it
-            self.m_sat[i], self.sigma_sat[i], self.del_t[i] = float(row[0]), float(row[1]), float(row[2])
-            self.fail_t[i], self.tau_do[i], self.target_alt[i] = float(row[3]), float(row[4]), float(row[5])
-            self.up_time[i], self.alpha_S[i], self.alpha_D[i] = float(row[6]), float(row[7]), float(row[8])
-            self.alpha_N[i], self.alpha_R[i], self.P[i] = float(row[9]), float(row[10]), float(row[11])
-            self.AM_sat[i], self.tau_sat[i], self.C_sat[i] = float(row[12]), float(row[13]), float(row[14])
-            self.expl_rate_L[i], self.expl_rate_D[i] = float(row[15]), float(row[16])
+            self.m_sat[i], self.sigma_sat[i], self.lam_sat[i] = float(row[0]), float(row[1]), float(row[2])
+            self.tau_do[i], self.target_alt[i], self.up_time[i] = float(row[3]), float(row[4]), float(row[5])
+            self.alpha_S[i], self.alpha_D[i], self.alpha_N[i] = float(row[6]), float(row[7]), float(row[8])
+            self.alpha_R[i], self.P[i], self.AM_sat[i] = float(row[9]), float(row[10]), float(row[11])
+            self.tau_sat[i], self.C_sat[i], self.expl_rate_L[i] = float(row[12]), float(row[13]), float(row[14])
+            self.expl_rate_D[i] = float(row[15])
         csv_file.close()
 
         # load data
@@ -498,13 +489,12 @@ class Cell:
 
         Output(s):
         dSdt : array of rate of change of the number of live satellites in the cell of each type due to only processes
-               withing the cell (excluding satellites ascending) (yr^(-1))
+               withing the cell (yr^(-1))
         dS_ddt : array of rate of change of the number of de-orbiting satellites in the cell of each type
                  (excluding satellites de-orbiting) (yr^(-1))
         dDdt : array of rate of change of the number of derelict satellites in the cell of each type
                (excluding derelicts decaying) (yr^(-1))
         dRdt : array of rate of change of number of rocket bodies in the cell of each type (excluding rockets decaying) (yr^(-1))
-        S_out : array of rate of satellites ascending from the cell of each type (yr^(-1))
         S_dout : array of rate of satellites de-orbiting from the cell of each type (yr^(-1))
         D_out : array of rate of satellites decaying from the cell of each type (yr^(-1))
         R_out : array of rate of rocket bodies decaying from the cell of each type (yr^(-1))
@@ -575,12 +565,9 @@ class Cell:
 
         # compute decay/ascend events for satellites
         kill_S, deorbit_S, decay_D = S_loc/self.del_t, Sd_loc/self.tau_do, D_loc/self.tau_sat
-        kill_S[self.ascending] = S_loc[self.ascending]/self.fail_t[self.ascending]
-        ascend_S = np.zeros(self.num_sat_types)
-        ascend_S[self.ascending] = S_loc[self.ascending]/self.up_time[self.ascending]
 
         # diagonals are to account for objects of the same type colliding
-        dSdt_tot = 0 - kill_S - np.sum(dSdt, axis=(1,2)) - np.sum(dSSdt, axis=1) - np.sum(dSS_ddt, axis=1) - np.sum(dSDdt, axis=1) - np.diag(dSSdt) - np.sum(dSRdt, axis=1) - expl_S
+        dSdt_tot = self.lam_sat - kill_S - np.sum(dSdt, axis=(1,2)) - np.sum(dSSdt, axis=1) - np.sum(dSS_ddt, axis=1) - np.sum(dSDdt, axis=1) - np.diag(dSSdt) - np.sum(dSRdt, axis=1) - expl_S
         dS_ddt_tot = self.P*kill_S - np.sum(dS_ddt, axis=(1,2)) - np.sum(dSS_ddt, axis=0) - np.sum(dS_dS_ddt, axis=1) - np.sum(dS_dDdt, axis=1) - np.diag(dS_dS_ddt) - np.sum(dS_dRdt, axis=1) - expl_Sd
         dDdt_tot = (1-self.P)*kill_S - np.sum(dDdt, axis=(1,2), where=self.cat_sat_N) + np.sum(dSdt, axis=(1,2), where=self.cat_sat_N==False) + np.sum(dS_ddt, axis=(1,2), where=self.cat_sat_N==False) - np.sum(dSDdt, axis=0) - np.sum(dS_dDdt, axis=0) - np.sum(dDDdt, axis=1) - np.diag(dDDdt) - np.sum(dDRdt, axis=1) - expl_D
         CS_dt = dSdt + dS_ddt + dDdt # total collisions between satellites and debris
@@ -618,7 +605,7 @@ class Cell:
         expl_S_tot = expl_S + expl_Sd + expl_D
 
         # return everything
-        return dSdt_tot, dS_ddt_tot, dDdt_tot, dRdt_tot, ascend_S, deorbit_S, decay_D, decay_R, decay_N, D_dt, RD_dt, dRRdt, CS_dt, dRdt, expl_S_tot, expl_R
+        return dSdt_tot, dS_ddt_tot, dDdt_tot, dRdt_tot, deorbit_S, decay_D, decay_R, decay_N, D_dt, RD_dt, dRRdt, CS_dt, dRdt, expl_S_tot, expl_R
 
     def update_cat_N(self):
         '''
