@@ -1069,7 +1069,7 @@ class NCell:
             to_return.append([])
             for j in range(cell.num_sat_types):
                 to_return[-1].append([])
-                for k in range(self.time):
+                for k in range(self.time+1):
                     to_return[-1][j].append(cell.S[k][j])
         return to_return
 
@@ -1090,7 +1090,7 @@ class NCell:
             to_return.append([])
             for j in range(cell.num_sat_types):
                 to_return[-1].append([])
-                for k in range(self.time):
+                for k in range(self.time+1):
                     to_return[-1][j].append(cell.S_d[k][j])
         return to_return
 
@@ -1111,7 +1111,7 @@ class NCell:
             to_return.append([])
             for j in range(cell.num_sat_types):
                 to_return[-1].append([])
-                for k in range(self.time):
+                for k in range(self.time+1):
                     to_return[-1][j].append(cell.D[k][j])
         return to_return
 
@@ -1132,7 +1132,7 @@ class NCell:
             to_return.append([])
             for j in range(cell.num_rb_types):
                 to_return[-1].append([])
-                for k in range(self.time):
+                for k in range(self.time+1):
                     to_return[-1][j].append(cell.R[k][j])
         return to_return
 
