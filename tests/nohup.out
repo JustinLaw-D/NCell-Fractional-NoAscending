@@ -1,0 +1,12 @@
+./../BreakupModel.py:425: RuntimeWarning: invalid value encountered in sqrt
+  del_v_max = -v0*np.sin(theta)*np.cos(phi) + np.sqrt(descriminate)
+./../BreakupModel.py:426: RuntimeWarning: invalid value encountered in sqrt
+  del_v_min = -v0*np.sin(theta)*np.cos(phi) - np.sqrt(descriminate)
+Traceback (most recent call last):
+  File "NCellLaunchFlowTest.py", line 21, in <module>
+    lam[0][0] = 100
+IndexError: list index out of range
+./../BreakupModel.py:425: RuntimeWarning: invalid value encountered in sqrt
+  del_v_max = -v0*np.sin(theta)*np.cos(phi) + np.sqrt(descriminate)
+./../BreakupModel.py:426: RuntimeWarning: invalid value encountered in sqrt
+  del_v_min = -v0*np.sin(theta)*np.cos(phi) - np.sqrt(descriminate)

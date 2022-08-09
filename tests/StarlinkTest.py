@@ -13,10 +13,10 @@ S_i = [0]
 S_di = [0]
 D_i = [0]
 N_i = 2.5e-8*V
-lam = 1000
+lam = [1000]
 T = 50
 
-atmosphere = NCell([S_i], [S_di], [D_i], [N_i], [600], alt, [lam], tau_do=[[2]])
+atmosphere = NCell([S_i], [S_di], [D_i], [N_i], alt, [lam], tau_do=[[2]])
 atmosphere.run_sim_precor(T, dt_i=1, dt_min=1/1000)
 t = atmosphere.get_t()
 S = atmosphere.get_S()[0][0]
