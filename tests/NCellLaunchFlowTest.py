@@ -17,11 +17,12 @@ for i in range(len(alts)):
     S_i.append([0])
     S_di.append([0])
     D_i.append([0])
+    lam.append([0])
 N_i = np.zeros(len(alts), dtype=np.int64)
 lam[0][0] = 100
-lam[-1][0] = 100
+lam[-1][0] = 200
 T = 100
 atmosphere = NCell(S_i, S_di, D_i, N_i, alt_edges, lam)
 
-atmosphere.run_sim_precor(T, upper=False)
+atmosphere.run_sim_euler(T, dt=0.001, upper=False)
 atmosphere.save('./', "test_save_NLaunchFlow", gap=0.05, force=True)

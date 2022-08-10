@@ -949,7 +949,7 @@ class NCell:
                         expl_list.extend(expl_temp)
 
                 if event.freq is not None: # events occuring at specific frequencies
-                    if self.t[self.time] - event.last_event <= 1/event.freq:
+                    if self.t[self.time] - event.last_event >= 1/event.freq:
                         dS_temp, dS_d_temp, dD_temp, dR_temp, dN_loc_temp, coll_temp, expl_temp = event.run_event(S, S_d, D, R, N, self.logL_edges, self.chi_edges)
                         dS += dS_temp
                         dS_d += dS_d_temp
@@ -958,6 +958,7 @@ class NCell:
                         dN_loc += dN_loc_temp
                         coll_list.extend(coll_temp)
                         expl_list.extend(expl_temp)
+                        event.last_event = self.t[self.time]
 
                 # update values
                 curr_cell.S[self.time] += dS

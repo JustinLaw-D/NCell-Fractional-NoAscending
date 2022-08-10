@@ -12,11 +12,10 @@ S_i = [[0,0,0],[0,0,0]]
 S_di = [[0,0,0],[50,1e2,2e2]]
 D_i = [[0,0,0],[0,0,0]]
 N_i1, N_i2 = 0, 0
-lam = [0,0,0]
-target_alts = [alt2,alt2,alt2]
+lam = [[0,0,0]]*2
 T = 50
 tau_do = [[5,5,5],[5,5,5]]
-atmosphere = NCell(S_i, S_di, D_i, [N_i1, N_i2], target_alts, alt_edges, lam, tau_do=tau_do)
+atmosphere = NCell(S_i, S_di, D_i, [N_i1, N_i2], alt_edges, lam, tau_do=tau_do)
 
 atmosphere.run_sim_precor(T, upper=False)
 atmosphere.save('./', 'test_save_2CellNTypeDeorbit', gap=0.01)
